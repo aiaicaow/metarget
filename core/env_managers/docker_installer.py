@@ -12,6 +12,7 @@ from core.env_managers.installer import Installer
 
 class DockerInstaller(Installer):
     _docker_gadgets = [
+        'telnet',
         'docker-ce',
         'docker-ce-cli',
         'docker',
@@ -21,10 +22,7 @@ class DockerInstaller(Installer):
         'runc',
     ]
     _docker_requirements = [
-        'apt-transport-https',
         'ca-certificates',
-        'gnupg-agent',
-        'software-properties-common',
     ]
 
     @classmethod
@@ -39,7 +37,7 @@ class DockerInstaller(Installer):
         """
         stdout, stderr = verbose_func.verbose_output(verbose)
         for gadget in cls._docker_gadgets:
-            temp_cmd = copy.copy(cls.cmd_apt_uninstall)
+            temp_cmd = copy.copy(cls.cmd_yum_uninstall)
             temp_cmd.append(gadget)
             subprocess.run(
                 temp_cmd,
@@ -79,22 +77,17 @@ class DockerInstaller(Installer):
         # install requirements
         color_print.debug('installing prerequisites')
         try:
-            if not cls._apt_update(verbose=verbose):
-                return False
+            #if not cls._apt_update(verbose=verbose):
+                #return False
             subprocess.run(
-                cls.cmd_apt_install +
+                cls.cmd_yum_install +
                 cls._docker_requirements,
                 stdout=stdout,
                 stderr=stderr,
                 check=True)
         except subprocess.CalledProcessError:
             return False
-        cls._add_apt_repository(gpg_url=config.docker_apt_repo_gpg,
-                                repo_entry=config.docker_apt_repo_entry, verbose=verbose)
-        for repo in config.containerd_apt_repo_entries:
-            cls._add_apt_repository(repo_entry=repo, verbose=verbose)
-
-        cls._apt_update(verbose=verbose)
+        #cls._apt_update(verbose=verbose)
 
         return True
 

@@ -9,6 +9,7 @@ import subprocess
 import docker
 import socket
 import requests
+import re
 from tqdm import tqdm
 
 import config
@@ -24,6 +25,13 @@ class Installer(object):
     cmd_apt_madison = 'apt-cache madison'.split()
     cmd_apt_search = 'apt-cache search'.split()
     cmd_apt_add_key = 'apt-key add -'.split()
+
+    cmd_yum_uninstall = "yum remove".split()
+    cmd_yum_clean = "yum clean all".split()
+    cmd_yum_makecache ="yum makecache".split()
+    cmd_yum_install = "yum install".split()
+    cmd_yum_search = "yum list --showduplicates".split()
+    
     try:
         docker_client = docker.from_env()
     except BaseException:
@@ -32,7 +40,7 @@ class Installer(object):
     @classmethod
     def _get_apt_complete_version(cls, name, version, verbose=False):
         _, stderr = verbose_func.verbose_output(verbose)
-        temp_cmd = copy.copy(cls.cmd_apt_madison)
+        temp_cmd = copy.copy(cls.cmd_yum_search)
         temp_cmd.append(name)
         try:
             res = subprocess.run(
@@ -44,12 +52,13 @@ class Installer(object):
             return None
         entries = res.stdout.decode('utf-8').split('\n')
         complete_version = None
-        entries.pop(-1)  # remove ''
-        version_candidates = [entry.split('|')[1].strip() for entry in entries]
-        version_candidates.sort()
+        del entries[:3] # remove
+        entries.pop(-1)#remove ''
+        version_candidates = [entry.split( )[1].strip() for entry in entries]
+        #version_candidates.sort()
         for candidate in version_candidates:
             if version in candidate:
-                complete_version = candidate
+                complete_version = re.sub("^3:","",candidate)
                 break
         return complete_version
 
@@ -87,9 +96,9 @@ class Installer(object):
                 'installing {gadget} with {version} version'.format(
                     gadget=name, version=complete_version))
             # install with the specified version
-            temp_cmd = copy.copy(cls.cmd_apt_install)
+            temp_cmd = copy.copy(cls.cmd_yum_install)
             temp_cmd.append(
-                '{name}={version}'.format(
+                '{name}-{version}'.format(
                     name=name,
                     version=complete_version))
             try:
@@ -111,8 +120,13 @@ class Installer(object):
         stdout, stderr = verbose_func.verbose_output(verbose)
         try:
             subprocess.run(
-                cls.cmd_apt_update,
+                cls.cmd_yum_clean,
                 stdout=stdout,
+                stderr=stderr,
+                check=True)
+            subprocess.run(
+                cls.cmd_yum_makecache,
+                stdin=stdout,
                 stderr=stderr,
                 check=True)
             return True
