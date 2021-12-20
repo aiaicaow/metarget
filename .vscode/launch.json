@@ -12,8 +12,8 @@
             "console": "integratedTerminal",
             "args": [
                 "cnv",
-                "install",
-                "cve-2019-573601",
+                "remove",
+                "cve-2019-5736",
                 "--verbose"
             ]
         }
